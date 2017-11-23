@@ -29,8 +29,13 @@ popd
 
 
 echo "Press enter to unmount encrypted partition"
+read
 umount /mnt/backup
+
 echo "Press enter to release encrypted partition"
+read
 cryptsetup close luks-${partition_data}
+
 echo "Press enter to exit"
+read
 
