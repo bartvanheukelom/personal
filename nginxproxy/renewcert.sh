@@ -4,10 +4,17 @@
 #
 set -e
 
+# settings
 domain="QQQDOMAINQQQ"
 email="QQQEMAILQQQ"
 
-mkdir -p letsencrypt
-docker run --rm -p 443:443 --mount "src=$(pwd)/letsencrypt,target=/etc/letsencrypt,type=bind" \
+
+ledir="$(pwd)/letsencrypt"
+destdir="etc"
+
+# acquire certificate
+docker run --rm -p 443:443 --volume "${ledir}:/etc/letsencrypt" \
 	certbot/certbot certonly --standalone --domain ${domain} -m ${email} --agree-tos
-cp letsencrypt/live/${domain}/*.pem etc/
+
+# copy to destination
+cp "${ledir}/live/${domain}/*.pem" "${destdir}/"
