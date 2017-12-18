@@ -8,13 +8,21 @@ if [[ $cmd == "help" ]]; then
 	exit 0
 fi
 
+# TODO allow specifying paths
+# TODO recursive
+
 echo "Doing $cmd on all repos"
 for x in *; do
 	if [[ -d $x ]]; then
-		pushd $x
+		echo "$(tput setaf 2)$(tput bold)---------- ${x} ----------$(tput sgr0)"
+		pushd $x > /dev/null
 		if [[ -d ".svn" ]]; then
+			echo "$(tput setaf 4)subversion$(tput sgr0)"
+			echo
 			svn $cmd 
 		elif [[ -d ".git" ]]; then
+			echo "$(tput setaf 5)git$(tput sgr0)"
+			echo
 			case $cmd in
 				up)
 					gcmd=pull
@@ -24,7 +32,11 @@ for x in *; do
 					;;
 			esac
 			git $gcmd
+		else
+			echo "Not a working copy"
 		fi
-		popd
+		popd > /dev/null
+		echo
+		echo
 	fi
 done
