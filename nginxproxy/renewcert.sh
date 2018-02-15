@@ -13,8 +13,9 @@ ledir="$(pwd)/letsencrypt"
 destdir="etc"
 
 # acquire certificate
-docker run --rm -p 443:443 --volume "${ledir}:/etc/letsencrypt" \
+docker run --rm -p 443:443 -p 80:80 --volume "${ledir}:/etc/letsencrypt" \
 	certbot/certbot certonly --standalone --domain ${domain} -m ${email} --agree-tos
 
 # copy to destination
 cp "${ledir}/live/${domain}/*.pem" "${destdir}/"
+
