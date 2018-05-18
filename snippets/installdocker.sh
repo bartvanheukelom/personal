@@ -24,4 +24,4 @@ compver=1.19.0
 echo "Press Enter to install Docker Compose $compver @ /usr/local/bin/docker-compose or Ctrl-C to not install"
 read
 curl -L https://github.com/docker/compose/releases/download/$compver/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-
+chmod +x /usr/local/bin/docker-compose
