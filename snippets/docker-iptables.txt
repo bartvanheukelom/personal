@@ -1,0 +1,42 @@
+:INPUT ACCEPT [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+:FILTERS - [0:0]
+:DOCKER-USER - [0:0]
+
+# These chains CAN be flushed
+-F INPUT
+-F DOCKER-USER
+-F FILTERS
+
+-A INPUT -i lo -j ACCEPT
+-A INPUT -p icmp --icmp-type any -j ACCEPT
+-A INPUT -j FILTERS
+
+# Link DOCKER-USER back to FILTERS (where filters are normally defined)
+# TODO why only ens160?
+-A DOCKER-USER -i ens160 -j FILTERS
+
+################################ FILTERS ################################
+-A FILTERS -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# accept SSH from anywhere
+-A FILTERS -p TCP --dport 282 -j ACCEPT
+
+### services (TODO dev whitelist)
+-A FILTERS -p TCP --dport 80 -j ACCEPT
+-A FILTERS -p TCP --dport 443 -j ACCEPT
+
+### management
+# Zabbix
+-A FILTERS -p TCP --dport 10050 -j ACCEPT
+-A FILTERS -p UDP --dport 10050 -j ACCEPT
+-A FILTERS -p TCP --dport 10051 -j ACCEPT
+-A FILTERS -p UDP --dport 10051 -j ACCEPT
+# Idera
+-A FILTERS -p TCP --dport 1167 -j ACCEPT
+
+-A FILTERS -j REJECT --reject-with icmp-host-prohibited
+
+COMMIT
+
