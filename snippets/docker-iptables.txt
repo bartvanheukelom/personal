@@ -1,3 +1,10 @@
+#!/sbin/iptables-restore --noflush
+# Firewall config for BANANA
+#
+# WARNING
+# Do not load this with `iptables-restore` because that will break Docker!
+# To apply, simply execute this config (or use --noflush).
+
 :INPUT ACCEPT [0:0]
 :FORWARD DROP [0:0]
 :OUTPUT ACCEPT [0:0]
@@ -23,7 +30,7 @@
 # accept SSH from anywhere
 -A FILTERS -p TCP --dport 282 -j ACCEPT
 
-### services (TODO dev whitelist)
+### services
 -A FILTERS -p TCP --dport 80 -j ACCEPT
 -A FILTERS -p TCP --dport 443 -j ACCEPT
 
