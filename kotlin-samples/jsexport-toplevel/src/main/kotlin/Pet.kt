@@ -43,3 +43,21 @@ interface Humanoid {
     }
 
 }
+
+@JsExport // also fine
+class ClassyHumanoid(val name: String) {
+
+    class CareTaker(val h: Humanoid) {
+        fun takeCare() {}
+    }
+
+}
+
+//@JsExport - not fine
+data class Cyborg(val memory: String) {
+
+    class Cloner(val template: Cyborg) {
+        fun produceClone() = template.copy()
+    }
+
+}

@@ -38,3 +38,11 @@ interface AnimalLike {
     }
 
 }
+
+data class Android(val memory: String) {
+
+    class Cloner(val template: Android) {
+        fun produceClone() = template.copy()
+    }
+
+}
