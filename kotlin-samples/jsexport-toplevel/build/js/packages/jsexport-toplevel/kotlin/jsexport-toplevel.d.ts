@@ -27,4 +27,24 @@ export namespace AbstractBird {
         stressOut(): void;
     }
 }
+export interface AnimalLike {
+    readonly name: string;
+}
+export namespace AnimalLike {
+    class CareTaker {
+        constructor(a: AnimalLike);
+        readonly a: AnimalLike;
+        takeCare(): void;
+    }
+}
+export interface Humanoid {
+    readonly name: string;
+}
+export namespace Humanoid {
+    class CareTaker {
+        constructor(h: Humanoid);
+        readonly h: Humanoid;
+        takeCare(): void;
+    }
+}
 export as namespace jsexport_toplevel;

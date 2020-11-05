@@ -28,3 +28,13 @@ abstract class AbstractBird {
     }
 
 }
+
+interface AnimalLike {
+
+    val name: String
+
+    class CareTaker(val a: AnimalLike) {
+        fun takeCare() {}
+    }
+
+}

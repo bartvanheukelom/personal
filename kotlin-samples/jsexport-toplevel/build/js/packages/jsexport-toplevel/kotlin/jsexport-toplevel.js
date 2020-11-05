@@ -33,6 +33,13 @@
     kind: 'class',
     interfaces: []
   };
+  function AnimalLike() {
+  }
+  AnimalLike.$metadata$ = {
+    simpleName: 'AnimalLike',
+    kind: 'interface',
+    interfaces: []
+  };
   function Duck() {
     Bird.call(this);
   }
@@ -71,6 +78,30 @@
   WildGooseChaseGoose.$metadata$ = {
     simpleName: 'WildGooseChaseGoose',
     kind: 'class',
+    interfaces: []
+  };
+  function CareTaker(a) {
+    this._a = a;
+  }
+  CareTaker.prototype._get_a_ = function () {
+    return this._a;
+  };
+  CareTaker.prototype.takeCare = function () {
+  };
+  CareTaker.$metadata$ = {
+    simpleName: 'CareTaker',
+    kind: 'class',
+    interfaces: []
+  };
+  Object.defineProperty(CareTaker.prototype, 'a', {
+    configurable: true,
+    get: CareTaker.prototype._get_a_
+  });
+  function Humanoid() {
+  }
+  Humanoid.$metadata$ = {
+    simpleName: 'Humanoid',
+    kind: 'interface',
     interfaces: []
   };
   Duck.prototype.layEgg_1 = Bird.prototype.layEgg_1;

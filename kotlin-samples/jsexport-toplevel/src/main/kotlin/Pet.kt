@@ -32,3 +32,14 @@ abstract class BigCat {
     }
 
 }
+
+@JsExport // interestingly, this works fine, and includes the CareTaker
+interface Humanoid {
+
+    val name: String
+
+    class CareTaker(val h: Humanoid) {
+        fun takeCare() {}
+    }
+
+}
