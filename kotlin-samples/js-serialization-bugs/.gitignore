@@ -1,0 +1,11 @@
+/.idea
+/.gradle
+/build/*
+!/build/js
+/build/js/*
+!/build/js/packages
+/build/js/packages/*
+!/build/js/packages/js-serialization-bugs
+/build/js/packages/js-serialization-bugs/*
+!/build/js/packages/js-serialization-bugs/kotlin
+
