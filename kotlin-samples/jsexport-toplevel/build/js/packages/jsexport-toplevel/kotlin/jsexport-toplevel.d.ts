@@ -13,4 +13,18 @@ export namespace Bird {
         roost(): void;
     }
 }
+export abstract class AbstractBird {
+    constructor();
+    layAbstractEgg(): void;
+}
+export namespace AbstractBird {
+    class SchrodingersDuck extends AbstractBird {
+        constructor();
+        swimOrDont(): void;
+    }
+    class WildGooseChaseGoose extends AbstractBird {
+        constructor();
+        stressOut(): void;
+    }
+}
 export as namespace jsexport_toplevel;
