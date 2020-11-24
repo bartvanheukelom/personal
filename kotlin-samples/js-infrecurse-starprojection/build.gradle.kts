@@ -1,5 +1,5 @@
 plugins {
-    id("org.jetbrains.kotlin.js") version "1.4.20-RC"
+    id("org.jetbrains.kotlin.js") version "1.4.20"
 }
 
 repositories {
