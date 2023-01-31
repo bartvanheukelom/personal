@@ -67,6 +67,9 @@ def manage(argv):
     # delete the selected images
     concurrent_starmap(delete_image, [(registry, digest, auth) for digest in selected])
 
+    print("""Remote images deleted. Don't forget to collect garbage, e.g. using:
+    docker exec dockreg_registry_1 bin/registry garbage-collect --delete-untagged /etc/docker/registry/config.yml""")
+
 
 def read_registries() -> Set[Registry]:
     """Read the list of registries from ~/.docker/config.json."""
@@ -205,10 +208,13 @@ def select_interactively_csv(images: List[Image]) -> Set[ImageDigest]:
     """
     outfile = tempfile.NamedTemporaryFile(suffix=".csv")
     with open(outfile.name, "w") as f:
-        writer = csv.writer(f)
-        writer.writerow(["delete", "repository", "tag", "digest"])
+        writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+        writer.writerow(["delete", "repository", "tag", "digest", "other tags"])
         for image in images:
-            writer.writerow(["X", image.repository, image.tag, image.digest])
+            writer.writerow([
+                "X", image.repository, image.tag, image.digest,
+                ", ".join(oi.tag for oi in images if oi.digest == image.digest and oi.tag != image.tag),
+            ])
 
     mtime = os.path.getmtime(outfile.name)
 
@@ -225,7 +231,7 @@ def select_interactively_csv(images: List[Image]) -> Set[ImageDigest]:
     with open(outfile.name) as f:
         reader = csv.reader(f)
         next(reader)
-        result: List[Tuple[str, Image]] = [(row[0], Image(*row[1:])) for row in reader]
+        result: List[Tuple[str, Image]] = [(row[0], Image(*row[1:4])) for row in reader]
     print_list("result", result)
 
     deletes: List[Image] = [image for (delcol, image) in result if delcol == "X"]
@@ -240,11 +246,11 @@ def select_interactively_csv(images: List[Image]) -> Set[ImageDigest]:
 
     delete_keys = {delkey(img) for img in deletes}
     print_list("delete_keys", delete_keys)
-    preserve = [image for image in images if delkey(image) not in delete_keys]
+    preserve = [img for img in images if delkey(img) not in delete_keys]
     print_list("preserve", preserve)
     preserve_digests = {image.digest for image in preserve}
     print(f"{preserve_digests=}")
-    really_delete: Set[ImageDigest] = {(img.repository, img.digest) for img in deletes if img.digest not in preserve}
+    really_delete: Set[ImageDigest] = {(img.repository, img.digest) for img in deletes if img.digest not in preserve_digests}
     print_list("really_delete", really_delete)
 
     return really_delete
