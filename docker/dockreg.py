@@ -119,19 +119,6 @@ ImageDigest = tuple[Repository, Digest]
 def list_images(registry: Registry, auth: AuthToken, include_repo: Callable[[str], bool] = lambda _: True) -> List[Image]:
     """List all images in the given registry, using the HTTP API."""
 
-    # List all repositories (effectively images):
-    #
-    # curl -X GET https://myregistry:5000/v2/_catalog
-    # > {"repositories":["redis","ubuntu"]}
-    # List all tags for a repository:
-    #
-    # curl -X GET https://myregistry:5000/v2/ubuntu/tags/list
-    # > {"name":"ubuntu","tags":["14.04"]}
-    # If the registry needs authentication you have to specify username and password in the curl command
-    #
-    # curl -X GET -u <user>:<pass> https://myregistry:5000/v2/_catalog
-    # curl -X GET -u <user>:<pass> https://myregistry:5000/v2/ubuntu/tags/list
-
     basic_auth = HTTPBasicAuthEncoded(auth)
 
     repos = [
