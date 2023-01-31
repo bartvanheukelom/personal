@@ -11,7 +11,7 @@ import tempfile
 import tkinter as tk
 from dataclasses import dataclass
 from tkinter import ttk
-from typing import Set, List, Optional, NewType, Tuple, Iterable, Any, Literal
+from typing import Set, List, Optional, NewType, Tuple, Iterable, Any
 
 import requests
 from requests.auth import AuthBase
@@ -55,11 +55,10 @@ def manage(argv):
 
     images = list_images(registry, auth)
     selected = select_interactively(images)
-    print("Selected:")
-    for image in selected:
-        print(image)
+    print_list("selected", selected)
 
     # delete the selected images
+    concurrent_starmap(delete_image, [(registry, digest, auth) for digest in selected])
 
 
 def read_registries() -> Set[Registry]:
@@ -104,6 +103,9 @@ class Image:
     # more: Any
 
 
+ImageDigest = tuple[Repository, Digest]
+
+
 def list_images(registry: Registry, auth: AuthToken) -> List[Image]:
     """List all images in the given registry, using the HTTP API."""
 
@@ -135,14 +137,13 @@ def list_images(registry: Registry, auth: AuthToken) -> List[Image]:
     #     "repository": repo["repository"],
     #     "images": [fetch_tag_info(repo["repository"], tag) for tag in repo["tags"]],
     # } for repo in with_tags]
-    # same but using 4 threads:
-    pool = multiprocessing.Pool(8)
+
     fetch_tasks = [(registry, repo["repository"], tag, basic_auth) for repo in with_tags for tag in repo["tags"]]
 
     # TODO REMOVE TEST
-    fetch_tasks = fetch_tasks[:64]
+    fetch_tasks = fetch_tasks[:512]
 
-    images = pool.map(fetch_tag_info, fetch_tasks)
+    images: list[Image] = concurrent_starmap(fetch_tag_info, fetch_tasks)
 
     # TODO REMOVE TEST
     # images[10].digest = images[11].digest
@@ -154,13 +155,13 @@ def list_images(registry: Registry, auth: AuthToken) -> List[Image]:
     return images
 
 
-def fetch_tag_info(args) -> Image:
+# def concurrent_map(func: Callable[T, R], iterable: Iterable[T]) -> List[R]: - TODO make work
+def concurrent_starmap(func, iterable):
+    pool = multiprocessing.Pool(8)
+    return pool.starmap(func, iterable)
 
-    registry, repo, tag, basic_auth = args
-    registry: Registry
-    repo: Repository
-    tag: Tag
-    basic_auth: HTTPBasicAuthEncoded
+
+def fetch_tag_info(registry: Registry, repo: Repository, tag: Tag, basic_auth: HTTPBasicAuthEncoded) -> Image:
 
     # runtime type checks
     if not isinstance(repo, str):
@@ -180,17 +181,18 @@ def fetch_tag_info(args) -> Image:
     return image
 
 
-def delete_image(registry: Registry, digest: Digest, auth: AuthToken):
+def delete_image(registry: Registry, imdi: ImageDigest, auth: AuthToken):
+    repo, digest = imdi
     basic_auth = HTTPBasicAuthEncoded(auth)
-    # requests.delete(f"https://{registry}/v2/{image.repository}/manifests/{image.digest}", auth=basic_auth)
+    requests.delete(f"https://{registry}/v2/{repo}/manifests/{digest}", auth=basic_auth)
     print(f"deleted {digest}")
 
 
-def select_interactively(images: List[Image]) -> Set[Digest]:
+def select_interactively(images: List[Image]) -> Set[ImageDigest]:
     return select_interactively_csv(images)
 
 
-def select_interactively_csv(images: List[Image]) -> Set[Digest]:
+def select_interactively_csv(images: List[Image]) -> Set[ImageDigest]:
     """
     Write the list of images to a temporary CSV file, then open it in LibreOffice Calc.
     Wait for the user to mark items for deletion by putting an X in the first column,
@@ -238,14 +240,14 @@ def select_interactively_csv(images: List[Image]) -> Set[Digest]:
     print_list("preserve", preserve)
     preserve_digests = {image.digest for image in preserve}
     print(f"{preserve_digests=}")
-    really_delete: Set[Digest] = {img.digest for img in deletes if img.digest not in preserve}
+    really_delete: Set[ImageDigest] = {(img.repository, img.digest) for img in deletes if img.digest not in preserve}
     print_list("really_delete", really_delete)
 
     return really_delete
 
 
 # similar to select_interactively_csv, but instead of CSV, write an ODS file with actual interactive checkboxes instead of "X" marks
-def select_interactively_ods(images: List[Image]) -> Set[Digest]:
+def select_interactively_ods(images: List[Image]) -> Set[ImageDigest]:
     # https://pypi.org/project/pyexcel-ods3/
     raise NotImplementedError()
 
