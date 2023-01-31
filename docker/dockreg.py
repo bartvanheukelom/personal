@@ -11,7 +11,7 @@ import tempfile
 import tkinter as tk
 from dataclasses import dataclass
 from tkinter import ttk
-from typing import Set, List, Optional, NewType, Tuple, Iterable, Any
+from typing import Set, List, Optional, NewType, Tuple, Iterable, Any, Callable
 
 import requests
 from requests.auth import AuthBase
@@ -46,6 +46,8 @@ def manage(argv):
     # first positional arg is the registry
     parser = argparse.ArgumentParser()
     parser.add_argument("registry", choices=read_registries())
+    parser.add_argument("--repository", required=False)
+    parser.add_argument("--sort", choices=["digest", "tag"], default="digest")
 
     args = parser.parse_args(argv)
     registry = args.registry
@@ -53,7 +55,12 @@ def manage(argv):
     # read credentials from ~/.docker/config.json
     auth = read_credentials(registry)
 
-    images = list_images(registry, auth)
+    images = list_images(registry, auth, lambda repo: args.repository is None or repo == args.repository)
+    if args.sort == "digest":
+        images.sort(key=lambda image: (image.repository, image.digest, image.tag))
+    elif args.sort == "tag":
+        images.sort(key=lambda image: (image.repository, image.tag, image.digest))
+
     selected = select_interactively(images)
     print_list("selected", selected)
 
@@ -106,7 +113,7 @@ class Image:
 ImageDigest = tuple[Repository, Digest]
 
 
-def list_images(registry: Registry, auth: AuthToken) -> List[Image]:
+def list_images(registry: Registry, auth: AuthToken, include_repo: Callable[[str], bool] = lambda _: True) -> List[Image]:
     """List all images in the given registry, using the HTTP API."""
 
     # List all repositories (effectively images):
@@ -124,7 +131,11 @@ def list_images(registry: Registry, auth: AuthToken) -> List[Image]:
 
     basic_auth = HTTPBasicAuthEncoded(auth)
 
-    repos = requests.get(f"https://{registry}/v2/_catalog", auth=basic_auth).json()["repositories"]
+    repos = [
+        repo for repo in
+        requests.get(f"https://{registry}/v2/_catalog", auth=basic_auth).json()["repositories"]
+        if include_repo(repo)
+    ]
     print(repos)
 
     with_tags = [{
@@ -133,24 +144,9 @@ def list_images(registry: Registry, auth: AuthToken) -> List[Image]:
     } for repo in repos]
     print(with_tags)
 
-    # with_digests = [{
-    #     "repository": repo["repository"],
-    #     "images": [fetch_tag_info(repo["repository"], tag) for tag in repo["tags"]],
-    # } for repo in with_tags]
-
     fetch_tasks = [(registry, repo["repository"], tag, basic_auth) for repo in with_tags for tag in repo["tags"]]
 
-    # TODO REMOVE TEST
-    fetch_tasks = fetch_tasks[:512]
-
     images: list[Image] = concurrent_starmap(fetch_tag_info, fetch_tasks)
-
-    # TODO REMOVE TEST
-    # images[10].digest = images[11].digest
-    # images[32].digest = images[33].digest
-
-    # sort by repository, then by digest, then by tag
-    images.sort(key=lambda image: (image.repository, image.digest, image.tag))
 
     return images
 
@@ -169,7 +165,8 @@ def fetch_tag_info(registry: Registry, repo: Repository, tag: Tag, basic_auth: H
     if not isinstance(tag, str):
         raise ValueError(f"tag is not a string: {repr(tag)}")
 
-    info_resp = requests.get(f"https://{registry}/v2/{repo}/manifests/{tag}", auth=basic_auth)
+    info_resp = requests.get(f"https://{registry}/v2/{repo}/manifests/{tag}", auth=basic_auth,
+                             headers={"Accept": "application/vnd.docker.distribution.manifest.v2+json"})
     # print(f"{repo}/{tag} info: {info_resp}")
     image = Image(
         repository=repo,
@@ -181,11 +178,18 @@ def fetch_tag_info(registry: Registry, repo: Repository, tag: Tag, basic_auth: H
     return image
 
 
-def delete_image(registry: Registry, imdi: ImageDigest, auth: AuthToken):
+def delete_image(registry: Registry, imdi: ImageDigest, auth: AuthToken) -> tuple[ImageDigest, bool]:
     repo, digest = imdi
     basic_auth = HTTPBasicAuthEncoded(auth)
-    requests.delete(f"https://{registry}/v2/{repo}/manifests/{digest}", auth=basic_auth)
-    print(f"deleted {digest}")
+    url = f"https://{registry}/v2/{repo}/manifests/{digest}"
+    print(f"DELETE {url}")
+    resp = requests.delete(url, auth=basic_auth)
+    if resp.status_code == 202:
+        print(f"Deleted {repo}@{digest}")
+        return imdi, True
+    else:
+        print(f"Failed to delete {repo}@{digest}: {resp.status_code} {resp.text}")
+        return imdi, False
 
 
 def select_interactively(images: List[Image]) -> Set[ImageDigest]:
